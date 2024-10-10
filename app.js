@@ -19,6 +19,7 @@ const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 const hpp = require('hpp')
 const cookieParser = require('cookie-parser');
+const cors = require('cors');
 
 const limiter = rateLimit({
     max:300,
@@ -26,6 +27,9 @@ const limiter = rateLimit({
     message:"Too  many requests from this IP, please try again in an hour!"
 });
 
+//Implement cors
+app.use(cors())
+app.options('*', cors())
 //Set Security HTTP Headers
 app.use(helmet());
 
