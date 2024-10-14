@@ -2,8 +2,6 @@
     Todo:
     1. Send email to admin and client when a new transaction is created
     2. Implement authorization for deleting user
-    3. Install cookie-parser to read into the body
-
 */
 const express = require('express');
 const app = express();
@@ -20,12 +18,15 @@ const xss = require('xss-clean');
 const hpp = require('hpp')
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
+const compression = require('compression')
 
 const limiter = rateLimit({
     max:300,
     windowMs: 60 * 60 * 1000,
     message:"Too  many requests from this IP, please try again in an hour!"
 });
+
+
 
 //Implement cors
 app.use(cors())
@@ -35,6 +36,8 @@ app.use(helmet());
 
 //Limit number of requests from same IP
 app.use('/api', limiter)
+
+app.use(compression())
 
 //Body parser, read data from req.body into body
 app.use(express.json());
