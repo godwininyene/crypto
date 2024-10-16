@@ -26,8 +26,6 @@ const limiter = rateLimit({
     message:"Too  many requests from this IP, please try again in an hour!"
 });
 
-
-
 //Implement cors
 app.use(cors())
 app.options('*', cors())
@@ -63,7 +61,7 @@ app.use('/api/v1/transactions', transactionRouter);
 
 //Not found route
 app.all('*', (req, res, next)=>{
-    return next(new AppError(`The request URL ${req.originalUrl} was not found on this server!`, '', 404))
+    return next(new AppError(`The requested URL ${req.originalUrl} was not found on this server!`, '', 404))
 })
 
 app.use(globalErrorController)

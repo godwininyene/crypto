@@ -4,7 +4,8 @@
   "description": "Want to use this project to practice my knowlege of nodejs",
   "main": "app.js",
   "scripts": {
-    "start": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "start": "server.js"
   },
   "author": "Godwin Inyene",
   "license": "ISC",
