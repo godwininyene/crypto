@@ -3,7 +3,6 @@ const dotenv = require('dotenv');
 dotenv.config({path:'./config.env'});
 
 const app = require('./app');
-
 // mongoose.connect(process.env.DB_LOCAL, {
 //     useNewUrlParser:true,
 //     useCreateIndex:true,
@@ -13,7 +12,7 @@ const app = require('./app');
 
 let DB;
 if (process.env.NODE_ENV === 'development') {
-    DB = process.env.DATABASE_LOCAL;
+    DB = process.env.DB_LOCAL;
 } else if (process.env.NODE_ENV === 'production') {
     // DB = process.env.DATABASE_LOCAL;
     DB = process.env.DATABASE.replace('<PASSWORD>', process.env.DATABASE_PASSWORD);

@@ -13,7 +13,7 @@ const signToken = user=>{
     });
 }
 
-const createSendToken = (user, statusCode, res)=>{
+const createSendToken = (user, statusCode, req, res)=>{
     const token = signToken(user)
     const cookieOption = {
         expires:new Date(Date.now() + process.env.JWT_COOKIE_EXPIRESIN * 24 * 60 * 60 * 1000),
@@ -47,7 +47,7 @@ exports.signup = catchAsync(async(req, res, next)=>{
     );
     //Create a wallet for the newly created user
     await Wallet.create({user:user._id})
-    createSendToken(user, 201, res)
+    createSendToken(user, 201, req, res)
 });
 
 exports.login = catchAsync(async(req, res, next)=>{
@@ -67,7 +67,7 @@ exports.login = catchAsync(async(req, res, next)=>{
     }
 
     // 3) Everything is ok, send token to client
-    createSendToken(user, 200, res)
+    createSendToken(user, 200, req, res)
 });
 
 exports.protect = catchAsync(async(req, res, next)=>{
@@ -162,7 +162,7 @@ exports.resetPassword = catchAsync(async(req, res, next)=>{
     // 3) Update passwordChangedAt property for the user
 
     // 4) Log in the user, send JWT
-    createSendToken(user, 200, res)
+    createSendToken(user, 200, req, res)
 })
 
 exports.updatePassword = catchAsync(async(req, res, next)=>{
@@ -180,5 +180,5 @@ exports.updatePassword = catchAsync(async(req, res, next)=>{
     await user.save();
 
     // 4) Log the user in, send jwt
-    createSendToken(user, 200, res)
+    createSendToken(user, 200,req,  res)
 })
