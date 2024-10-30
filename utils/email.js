@@ -9,7 +9,7 @@ module.exports = class Email {
         this.url = url;
         this.amount = amount;
         this.plan = plan;
-        this.from =process.env.EMAIL_FROM
+        this.from = `Trust Platform Finance <${process.env.EMAIL_FROM}>`;
     }
 
     newTransport(){

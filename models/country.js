@@ -21,5 +21,8 @@ module.exports = Country;
 
 // fetch('http://127.0.0.1:8000/api/fetch-countries')
 // .then(res =>  res.json())
-// .then(async data =>await  Country.create(data))
+// .then(async data =>{
+//     const countries = await  Country.insertMany(data);
+//     console.log("Countries added successfully")
+// })
 // .catch(err => console.log(err))
