@@ -3,6 +3,9 @@ const Investment = require('./../models/investment')
 const Plan = require('../models/plan');
 const Wallet = require('../models/wallet');
 const AppError = require("../utils/apError");
+const Email = require("../utils/email");
+
+
 
 exports.makeInvestment = catchAsync(async(req, res, next)=>{
     // Assign the user ID if it's not provided in the body (for nested routes)
@@ -39,21 +42,36 @@ exports.makeInvestment = catchAsync(async(req, res, next)=>{
     //Create investment
     req.body.expiryDate = expiryDate;
     const investment = await Investment.create(req.body);
-    res.status(201).json({
-        status:"success",
-        data:{
-            investment
-        }
-        
-    })
+
+    // Send email
+     try {
+        await new Email(req.user, '', '', req.body.amount,plan ).sendInvestment()
+        res.status(201).json({
+            status: 'success',
+            data:{
+                investment
+            }
+        });
+    } catch (error) {
+        console.log(error)
+        return next(new AppError("There was a problem sending the email. Please try again later!", '', 500));
+    }
+
 });
 
 exports.getAllInvestments = catchAsync(async(req, res, next)=>{
      //Allowed for fetching investments for the user
      let filter = {};
      if(req.user.role != 'admin') filter={user:req.user._id}
+   
+    const query =  Investment.find(filter);
 
-    const investments = await Investment.find(filter);
+     //If the requested user is an admin, populate investment with the user.
+     if(req.user.role == 'admin'){
+        query.populate({path:'user', select:'name photo'})
+    }
+    const investments = await query;
+
     res.status(200).json({
         result:investments.length,
         status:"success",
@@ -83,11 +101,12 @@ exports.handleInvestments = catchAsync(async (req, res, next) => {
         const to = new Date(investment.expiryDate).getTime();
     
         const totalDuration = (to - from) / 3600000;
+      
 
         const expiryDate = new Date(investment.expiryDate).getTime();
         const now = today.getTime();
 
-
+      
         // Mining has ended
         if (expiryDate <= now) {
             // Calculate and accumulate the profit and balance
@@ -119,7 +138,5 @@ exports.handleInvestments = catchAsync(async (req, res, next) => {
         }
     });
 });
-
-
 
 

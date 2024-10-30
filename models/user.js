@@ -55,7 +55,8 @@ const userSchema = new mongoose.Schema({
         default:`cryp-${Date.now()}`
     },
     referralId:{
-        type:String
+        type:String,
+        trim:true
     },
 
     password:{
@@ -78,50 +79,31 @@ const userSchema = new mongoose.Schema({
     passwordChangedAt:Date,
     passwordResetToken:String,
     passwordResetExpires:Date,
-
-    // wallet: {
-    //     // This created embedded documents using array notation
-    //     type: [{
-    //       balance: {
-    //         type: Number,
-    //         default: 0
-    //       },
-    //       profit: {
-    //         type: Number,
-    //         default: 0
-    //       },
-    //       referralBalance: {
-    //         type: Number,
-    //         default: 0
-    //       }
-    //     }],
-    //     default: [{
-    //       balance: 0,
-    //       profit: 0,
-    //       referralBalance: 0
-    //     }]
-    // }
-      
-
-    // wallet:{
-    //     balance:{
-    //         type:Number,
-    //         default:0
-    //     },
-    //     profit:{
-    //         type:Number,
-    //         default:0
-    //     },
-    //     referralBalance:{
-    //         type:Number,
-    //         default:0
-    //     },
-    // }
-
+    createdAt:{
+        type:Date,
+        default:Date.now()
+    },
+    updatedAt:{
+        type:Date,
+        default:Date.now()
+    }
+},{
+    toJSON:{virtuals:true},
+    toObject:{virtuals:true}
 });
 
 
 
+userSchema.virtual('wallet', {
+    ref:'Wallet',
+    foreignField:'user',
+    localField:'_id'
+});
+userSchema.virtual('bankAccounts', {
+    ref:'BankAccount',
+    foreignField:'user',
+    localField:'_id'
+});
 userSchema.pre('save', async function(next){
     //Only run this function when the password field is actually  modified
     if(!this.isModified("password")) return next();
@@ -164,3 +146,4 @@ userSchema.methods.createPasswordResetToken = function(){
 }
 const User = mongoose.model('User', userSchema);
 module.exports = User;
+

@@ -1,6 +1,7 @@
 const AppError = require("../utils/apError");
 const catchAsync = require("../utils/catchAsync");
 const User = require('./../models/user')
+const Email = require('./../utils/email')
 
 const filterObj = (obj, ...allowFields)=>{
     const newObj = {};
@@ -9,6 +10,30 @@ const filterObj = (obj, ...allowFields)=>{
     });
 
     return newObj
+}
+
+const updateApprovalStatus = async(user, newStatus)=> {
+    if (newStatus === 'approve' && user.approvalStatus === 'approved') {
+        throw new AppError("User account already approved!", '', 400);
+    }
+    if (newStatus === 'deny' && user.approvalStatus === 'denied') {
+        throw new AppError("User account approval already denied!", '', 400);
+    }
+    if (newStatus === 'deactivate' && user.approvalStatus === 'deactivated') {
+        throw new AppError("User account already deactivated!", '', 400);
+    }
+
+    user.approvalStatus = newStatus === 'deny' ? 'denied' : `${newStatus}d`;
+    user.status = newStatus === 'deny' ? 'denied' : `${newStatus}d`;
+    await user.save({ validateBeforeSave: false });
+    return user;
+}
+
+
+
+exports.getMe = (req, res, next)=>{
+    req.params.id = req.user._id;
+    next();
 }
 exports.updateMe = catchAsync(async(req, res, next)=>{
     // 1) Create an error if user trys to update password field
@@ -39,15 +64,9 @@ exports.deleteMe = catchAsync(async(req, res, next)=>{
     })
 })
 
-exports.createUser = catchAsync(async(req, res, next)=>{
-    res.status(500).json({
-        status:"error",
-        message:"This route is not yet implement"
-    });
-})
 
 exports.getAllUsers = catchAsync(async(req, res, next)=>{
-    const users = await User.find()
+    const users = await User.find({role: {$ne:'admin'}}).populate('wallet').populate('bankAccounts')
     res.status(200).json({
         status:"success",
         data:{
@@ -59,18 +78,19 @@ exports.getAllUsers = catchAsync(async(req, res, next)=>{
 
 
 exports.getUser = catchAsync(async(req, res, next)=>{
-    res.status(500).json({
-        status:"error",
-        message:"This route is not yet implement"
-    });
+    const user = await User.findById(req.params.id)
+    if(!user){
+        return next(new AppError("No user found with that ID", '', 404))
+    }
+    res.status(204).json({
+        status:"success",
+        data:{
+            user
+        }
+    })
 });
 
-exports.updateUser = catchAsync(async(req, res, next)=>{
-    res.status(500).json({
-        status:"error",
-        message:"This route is not yet implement"
-    });
-});
+
 
 exports.deleteUser = catchAsync(async(req, res, next)=>{
     const user = await User.findByIdAndDelete(req.params.id)
@@ -81,4 +101,37 @@ exports.deleteUser = catchAsync(async(req, res, next)=>{
         status:"success",
         data:null
     })
+})
+
+
+exports.updateStatus = catchAsync(async(req, res, next)=>{
+    const{status} = req.body
+    let type;
+    const user = await User.findById(req.params.id).populate('wallet');
+
+    if(!user){
+        return next(new AppError("No user found with that ID", '', 404))
+    }
+   
+
+    let url = `${req.get('referer')}manage/investor/dashboard`
+
+    if (status === 'approve') type='account_approved'
+    
+    if (status === 'deny') type='account_denied'
+     
+    if (status === 'deactivate') type="account_deactivated"
+       
+    try {
+        const updatedUser = await updateApprovalStatus(user, status)
+        await new Email(user, type, url).sendOnBoard();
+        res.status(200).json({
+            status: 'success',
+            data:{
+                user:updatedUser
+            }
+        });
+    } catch (error) {
+        return next(new AppError("There was a problem sending the email. Please try again later!", '', 500));
+    }
 })

@@ -2,7 +2,7 @@ const catchAsync = require("../utils/catchAsync");
 const Transaction = require('./../models/transaction');
 const Wallet = require('./../models/wallet');
 const User = require('./../models/user');
-const sendEmail = require('./../utils/email')
+const Email = require('./../utils/email')
 const AppError = require('./../utils/apError')
 const multer = require('multer')
 const sharp = require('sharp');
@@ -90,23 +90,12 @@ exports.createTransaction = catchAsync(async(req, res, next)=>{
     }
 
     // Create new transaction
-    if(req.file) req.body.receipt = req.file.filename;
+    if(req.file) req.body.receipt = `${req.protocol}://${req.get('host')}/img/receipts/${req.file.filename}`;
      const newTransaction = await Transaction.create(req.body);
-
-    // Prepare the email message
-    const username = req.user.name;
-    const action = type === 'deposit' ? 'deposited' : 'withdrawn';
-    const message = `Hi ${username}, you have successfully ${action} $${amount}.\n 
-    ${type === 'deposit' ? 'Deposit' : 'Withdrawal'} is waiting to be confirmed.`;
 
     //send email to user
     try {
-        await sendEmail({
-            subject: `${type === 'deposit' ? 'Deposit Notice' : 'Withdrawal Notice'}`,
-            email: req.user.email,
-            message,
-        });
-
+        await new Email(req.user, type, '', amount).sendTransaction()
         // Send response after successful transaction and email
         res.status(201).json({
             status: 'success',
@@ -115,6 +104,7 @@ exports.createTransaction = catchAsync(async(req, res, next)=>{
             },
         });
     } catch (error) {
+       
         return next(new AppError("There was a problem sending the email.. Please try again later!", '', 500))
     }
 });
@@ -123,8 +113,15 @@ exports.getAllTransactions = catchAsync(async(req, res, next)=>{
     //Allowed for fetching transaction for the user
     let filter = {};
     if(req.user.role != 'admin') filter={user:req.user._id}
+    const query = Transaction.find(filter);
 
-    const transactions = await Transaction.find(filter);
+    //If the requested user is an admin, populate transactions with the user.
+    if(req.user.role == 'admin'){
+        query.populate({path:'user', select:'name photo'})
+    }
+
+    const transactions = await query;
+
     res.status(200).json({
         results:transactions.length,
         status:'success',
@@ -136,16 +133,22 @@ exports.getAllTransactions = catchAsync(async(req, res, next)=>{
 
 exports.handleTransaction = catchAsync(async (req, res, next) => {
     const { action } = req.params; // 'approve' or 'decline'
-    let message;
 
+    //If the requested user is an admin, populate transactions with the user.
+    let query = Transaction.findById(req.params.id)
+   
+    if(req.user.role == 'admin'){
+        query.populate({path:'user', select:'name photo'})
+    }
     // Retrieve transaction, user, and wallet
-    const transaction = await Transaction.findById(req.params.id);
-    const wallet = await Wallet.findOne({ user: transaction.user });
-    const user = await User.findById(transaction.user);
-
+    const transaction = await query;
     if (!transaction) {
         return next(new AppError("No transaction was found with that ID", '', 404));
     }
+    const wallet = await Wallet.findOne({ user: transaction.user });
+    const user = await User.findById(transaction.user);
+
+   
 
     // Already processed status checks
     if (action === 'approve' && transaction.status === 'success') {
@@ -159,16 +162,12 @@ exports.handleTransaction = catchAsync(async (req, res, next) => {
         // Approve transaction logic
         if (transaction.type === 'deposit') {
             wallet.balance += transaction.amount;
-            message = `Your deposit of $${transaction.amount} has been confirmed. \n You can view your account balance by clicking the button below.`;
         } else if (transaction.type === 'withdrawal') {
             wallet.balance -= transaction.amount;
-            message = `Your withdrawal of $${transaction.amount} has been confirmed and coins have been paid into your provided wallet address. \n You can view your withdrawal transaction status by clicking the button below.`;
         }
         transaction.status = 'success';
     } else if (action === 'decline') {
         // Decline transaction logic
-        message = `Your ${transaction.type} of $${transaction.amount} was not confirmed. \n You will receive an email with more details.`;
-
         if (transaction.status === 'success') {
             if (transaction.type === 'deposit') {
                 wallet.balance -= transaction.amount;
@@ -178,6 +177,29 @@ exports.handleTransaction = catchAsync(async (req, res, next) => {
         }
         transaction.status = 'declined';
     }
+    
+
+    // Prepare email info
+    const urls = {
+        deposit: `${req.get('referer')}manage/investor/dashboard`,
+        withdrawal: `${req.get('referer')}manage/investor/transactions`
+    };
+
+    const types = {
+        approve: {
+            deposit: 'confirmed_deposit',
+            withdrawal: 'confirmed_withdraw'
+        },
+        decline: {
+            deposit: 'unconfirmed_deposit',
+            withdrawal: 'unconfirmed_withdraw'
+        }
+    };
+
+    // Set email info based on action and transaction type
+    const type = types[action]?.[transaction.type];
+    const url = action === 'approve' ? urls[transaction.type] : undefined;
+
 
     //save updates
     await wallet.save({ validateBeforeSave: false });
@@ -185,14 +207,13 @@ exports.handleTransaction = catchAsync(async (req, res, next) => {
 
     // Send email
     try {
-        await sendEmail({
-            subject: transaction.type === 'deposit' ? 'Deposit Notice' : 'Withdrawal Notice',
-            email: user.email,
-            message,
-        });
+        await new Email(user, type, url, transaction.amount).sendTransaction()
         res.status(200).json({
             status: 'success',
             message: `Transaction ${action}d successfully!`,
+            data:{
+                transaction
+            }
         });
     } catch (error) {
         return next(new AppError("There was a problem sending the email. Please try again later!", '', 500));

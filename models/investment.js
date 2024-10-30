@@ -41,9 +41,10 @@ const investmentSchema = new mongoose.Schema({
 
 
 investmentSchema.pre(/^find/, async function(next){
-    this.populate({path:'plan', select:'name'}).populate({path:'user', select:'name'})
+    this.populate({path:'plan', select:'name'})
     next();
 })
 const Investment = mongoose.model("Investment", investmentSchema);
 
 module.exports = Investment
+

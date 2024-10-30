@@ -13,35 +13,61 @@ const signToken = user=>{
     });
 }
 
-const createSendToken = (user, statusCode, req, res)=>{
-    const token = signToken(user)
+// const createSendToken = (user, statusCode, req, res)=>{
+//     const token = signToken(user)
+//     const cookieOption = {
+//         expires:new Date(Date.now() + process.env.JWT_COOKIE_EXPIRESIN * 24 * 60 * 60 * 1000),
+//         // secure:true,
+//         httpOnly:true,
+//     }
+//     if(req.secure) cookieOption.secure = true
+//     res.cookie('jwt', token, cookieOption);
+//      //Remove password from output
+//     user.password = undefined
+//     res.status(statusCode).json({
+//         status:"success",
+//         token,
+//         data:{
+//             user
+//         }
+//     });
+// }
+
+const createSendToken = (user, statusCode, req, res) => {
+    const token = signToken(user);
     const cookieOption = {
-        expires:new Date(Date.now() + process.env.JWT_COOKIE_EXPIRESIN * 24 * 60 * 60 * 1000),
-        // secure:true,
-        httpOnly:true
+        expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRESIN * 24 * 60 * 60 * 1000),
+        httpOnly: true,
+        sameSite: 'None',
+    };
+
+    // Set 'secure' flag in production or if the request is secure
+    if (process.env.NODE_ENV === 'production' || req.secure) {
+        cookieOption.secure = true;
     }
-    if(req.secure) cookieOption.secure = true
+    // Send the cookie
     res.cookie('jwt', token, cookieOption);
-     //Remove password from output
-    user.password = undefined
+    // Remove password from the output
+    user.password = undefined;
+    // Send the response
     res.status(statusCode).json({
-        status:"sucess",
+        status: "success",
         token,
-        data:{
-            user
-        }
+        data: {
+            user,
+        },
     });
-}
+};
+
 exports.signup = catchAsync(async(req, res, next)=>{
-    
     
     const user = await User.create(
         {
             name:req.body.name,
             email:req.body.email,
+            phone:req.body.phone,
             referralId:req.body.referralId,
             password:req.body.password,
-            phone:req.body.phone,
             passwordConfirm:req.body.passwordConfirm
         }
     );
@@ -49,6 +75,27 @@ exports.signup = catchAsync(async(req, res, next)=>{
     await Wallet.create({user:user._id})
     createSendToken(user, 201, req, res)
 });
+
+exports.completeProfile = catchAsync(async(req, res, next)=>{
+    const updatedUser = await User.findByIdAndUpdate(req.user._id, {
+        phone: req.body.phone,
+        country: req.body.country,
+        gender: req.body.gender,
+        address: req.body.address
+    },
+        {
+            runValidators:true,
+            new:true
+        }
+    )
+
+    res.status(200).json({
+        status:"success",
+        data:{
+            user:updatedUser
+        }
+    })
+})
 
 exports.login = catchAsync(async(req, res, next)=>{
     const{email, password} = req.body;
@@ -60,7 +107,7 @@ exports.login = catchAsync(async(req, res, next)=>{
     }
 
     //2) Check if user exist and password is correct
-    const user = await User.findOne({email:email}).select('+password');
+    const user = await User.findOne({email:email}).select('+password').populate('wallet');
     if(!user || !(await user.correctPassword(password, user.password))){
         return next(new AppError("Invalid log in credentials", 
             {credentials:"Password or email is incorrect "}, 401))
@@ -70,13 +117,27 @@ exports.login = catchAsync(async(req, res, next)=>{
     createSendToken(user, 200, req, res)
 });
 
+exports.logout = (req, res) => {
+    res.cookie('jwt', 'loggedout', {
+      expires: new Date(Date.now() + 10 * 1000),
+      httpOnly: true,
+      secure:true,
+      sameSite: 'None',
+    });
+    res.status(200).json({ status: 'success' });
+  };
+
 exports.protect = catchAsync(async(req, res, next)=>{
     // 1) Getting token and checking if there
     let token;
+   
+    
     if(req.headers.authorization && req.headers.authorization.startsWith("Bearer")){
         token = req.headers.authorization.split(" ")[1];
-    }
-
+    }else if(req.cookies?.jwt){
+        token = req.cookies.jwt;
+      }
+  
     if(!token){
         return next(new AppError("Unauthenticated", 
             {Unauthenticated: "You are not log in. Please log in to gain access!"}, 401))

@@ -4,6 +4,7 @@ const catchAsync = require('./../utils/catchAsync')
 
 
 exports.getAllPlans = async(req, res, next)=>{
+   
     const plans = await Plan.find().select('-__v').sort('-_id');
     res.status(200).json({
         status:"success",
@@ -40,6 +41,7 @@ exports.getPlan = catchAsync(async(req, res, next)=>{
 });
 
 exports.updatePlan = catchAsync(async(req, res, next)=>{
+    
     const plan = await Plan.findByIdAndUpdate(req.params.id, req.body, {
         new:true,
         runValidators:true

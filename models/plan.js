@@ -41,13 +41,13 @@ const planSchema = new mongoose.Schema({
 
     referalBonus:{
         type:Number,
-        required:[true, 'A plan must have referal bonus'],
-        cast:'Referral bonus must be a number. Got {VALUE}'
+        // required:[true, 'A plan must have referal bonus'],
+        // cast:'Referral bonus must be a number. Got {VALUE}'
     },
     allowReferral:{
         type:Boolean,
         default:true,
-         cast:'Allow referral must be a boolean. Got {VALUE}'
+        cast:'Allow referral must be a boolean. Got {VALUE}'
     },
     currency:{
         type:String,
@@ -55,7 +55,7 @@ const planSchema = new mongoose.Schema({
         cast:'Currency must be a number. Got {VALUE}'
     },
     returnPrincipal:{
-        type:Boolean,
+        type:String,
         default:false,
         cast:'Return Principal must be a boolean. Got {VALUE}'
     }

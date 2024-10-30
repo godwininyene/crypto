@@ -43,6 +43,14 @@ const transactionSchema = new mongoose.Schema({
         type:mongoose.Schema.Types.ObjectId,
         ref:"User",
         required:[true, 'Transaction must belong to a user.']
+    },
+    createdAt:{
+        type:Date,
+        default:Date.now()
+    },
+    updatedAt:{
+        type:Date,
+        default:Date.now()
     }
 });
 
