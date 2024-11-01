@@ -26,6 +26,9 @@ const compression = require('compression')
 const Country = require('./models/country')
 const app = express();
 
+// Trust the first proxy
+app.set('trust proxy', 1);
+
 app.set('view engine', 'pug')
 app.set('views', path.join(__dirname, 'views'));
 

@@ -6,6 +6,7 @@ const Email = require('./../utils/email')
 const AppError = require('./../utils/apError')
 const multer = require('multer')
 const sharp = require('sharp');
+const {cloudinary} = require('./../utils/cloudinary');
 
 // const multerStorage = multer.diskStorage({
 //     destination:(req, file, cb)=>{
@@ -36,17 +37,37 @@ const upload = multer({
 exports.uploadReceipt = upload.single("receipt");
 exports.resizeReceipt = catchAsync(async(req, res, next)=>{
     
-    if(!req.file) return next();
+    // if(!req.file) return next();
 
-    req.file.filename = `receipt-${req.user._id}-${Date.now()}.jpeg`;
+    // req.file.filename = `receipt-${req.user._id}-${Date.now()}.jpeg`;
 
-    await sharp(req.file.buffer)
+    // await sharp(req.file.buffer)
+    //     // .resize(800, 600)
+    //     .toFormat("jpeg")
+    //     .jpeg({quality: 30})
+    //     .toFile(`public/img/receipts/${req.file.filename}`);
+
+    // next()
+
+    if (!req.file) return next();
+
+    const processedImageBuffer = await sharp(req.file.buffer)
         // .resize(800, 600)
         .toFormat("jpeg")
-        .jpeg({quality: 30})
-        .toFile(`public/img/receipts/${req.file.filename}`);
+        .jpeg({ quality: 30 })
+        .toBuffer();
 
-    next()
+    const result = await cloudinary.uploader.upload_stream({
+        folder: 'crypto/receipts',
+        public_id: `receipt-${req.user._id}-${Date.now()}`,
+        format: 'jpeg',
+    }, (error, result) => {
+        if (error) {
+            return next(new AppError("Cloudinary upload failed.", 500));
+        }
+        req.file.filename = result.secure_url; // store the URL for future use
+        next();
+    }).end(processedImageBuffer); // upload the buffer directly
 })
 exports.createTransaction = catchAsync(async(req, res, next)=>{
     const { type, amount, pay_option, user } = req.body;
@@ -90,7 +111,8 @@ exports.createTransaction = catchAsync(async(req, res, next)=>{
     }
 
     // Create new transaction
-    if(req.file) req.body.receipt = `${req.protocol}://${req.get('host')}/img/receipts/${req.file.filename}`;
+    // if(req.file) req.body.receipt = `${req.protocol}://${req.get('host')}/img/receipts/${req.file.filename}`;
+    if(req.file) req.body.receipt = req.file.filename;
      const newTransaction = await Transaction.create(req.body);
 
     //send email to user
