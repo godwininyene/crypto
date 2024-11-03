@@ -17,7 +17,8 @@ const userSchema = new mongoose.Schema({
     },
     phone:{
         type:String,
-        // unique:true
+        unique:true,
+        sparse: true // This allows multiple documents to have a value of null
     },
     country:String,
     gender:{
