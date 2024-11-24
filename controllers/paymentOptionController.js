@@ -1,9 +1,7 @@
 const PaymentOption = require("../models/paymentOption");
 const catchAsync = require("../utils/catchAsync");
 
-exports.createPaymentOption = catchAsync(async(req, res, next)=>{
-    console.log(req.headers.authorization);
-    
+exports.createPaymentOption = catchAsync(async(req, res, next)=>{ 
     const paymentOption = await PaymentOption.create(req.body);
     res.status(200).json({
         status:"success",

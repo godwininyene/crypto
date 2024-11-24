@@ -93,8 +93,6 @@ const userSchema = new mongoose.Schema({
     toObject:{virtuals:true}
 });
 
-
-
 userSchema.virtual('wallet', {
     ref:'Wallet',
     foreignField:'user',
@@ -105,11 +103,14 @@ userSchema.virtual('bankAccounts', {
     foreignField:'user',
     localField:'_id'
 });
+
+
 userSchema.pre('save', async function(next){
     //Only run this function when the password field is actually  modified
     if(!this.isModified("password")) return next();
     this.password = await bcrypt.hash(this.password, 12)
     this.passwordConfirm = undefined;
+    next()
 });
 
 userSchema.pre('save', function(next){

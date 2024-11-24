@@ -3,7 +3,7 @@ const catchAsync = require('../utils/catchAsync');
 const User = require('./../models/user');
 const jwt = require('jsonwebtoken');
 const {promisify} = require('util');
-const sendMail = require('./../utils/email');
+const Email = require('./../utils/email');
 const crypto = require('crypto');
 const Wallet = require('./../models/wallet')
 
@@ -180,16 +180,12 @@ exports.forgotPassword = catchAsync(async(req, res, next)=>{
     //2) Generate random reset token
     const resetToken = user.createPasswordResetToken();
     await user.save({validateBeforeSave:false});
-    const resetURL = `${req.protocol}://${req.get('host')}/api/v1/users/resetPassword/${resetToken}`
-    const message = `Forgot your password? Submit a PATCH request with your new password and passwordConfirm to:${resetURL}.\n If you didn't forget your password, please ignore this email `
+    const resetURL = `${req.get('referer')}users/resetPassword?t=${resetToken}`
+   
 
     //3) Send token to client's email
     try{
-        await sendMail({
-            subject:'Your password reset token (valid for 10mins)', 
-            email:user.email, 
-            message
-        });
+        await new Email(user, '', resetURL, '').sendPasswordReset()
         res.status(200).json({
             status:"success",
             message:"Token has been sent to email!"

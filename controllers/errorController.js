@@ -6,7 +6,7 @@ const handleDuplicateFieldError = err =>{
     const keyValue = err.keyValue;
     for(const key in keyValue){
         const error = {
-            [key]:`${key}(${keyValue[key]}) is already is use. Please use another value`
+            [key]:`${key}(${keyValue[key]}) is already in use. Please use another value`
         }
         errors.push(error);
     }
@@ -19,14 +19,11 @@ const handleValidationErrorDB= err=>{
             [el.path]:el.message
         }
     });
-    // const message = `Invalid input data: ${errors.join(" . ")}`
-    // return new AppError(message, 400)
-
+   
     return new AppError('validation error', errors, 400)
 };
 
 const handleCastErrorDb = err=>{
-    console.log(err)
     let error =err;
     if(err.name== 'CastError' || err.reason == null){
         error = `Invalid ${err.path}: ${err.value}`;

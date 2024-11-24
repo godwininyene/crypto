@@ -54,10 +54,7 @@ const transactionSchema = new mongoose.Schema({
     }
 });
 
-// transactionSchema.pre(/^find/, function(next){
-//     this.populate({path:'user', select:'name photo'});
-//     next();
-// })
+
 
 const Transaction = mongoose.model("Transaction", transactionSchema);
 

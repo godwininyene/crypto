@@ -8,15 +8,6 @@ const multer = require('multer')
 const sharp = require('sharp');
 const {cloudinary} = require('./../utils/cloudinary');
 
-// const multerStorage = multer.diskStorage({
-//     destination:(req, file, cb)=>{
-//         cb(null, 'public/img/receipts')
-//     },
-//     filename:(req, file, cb)=>{
-//         const ext = file.mimetype.split('/')[1]
-//         cb(null, `receipt-${req.user._id}-${Date.now()}.${ext}`)
-//     }
-// });
 
 const multerStorage = multer.memoryStorage();
 
@@ -169,8 +160,6 @@ exports.handleTransaction = catchAsync(async (req, res, next) => {
     }
     const wallet = await Wallet.findOne({ user: transaction.user });
     const user = await User.findById(transaction.user);
-
-   
 
     // Already processed status checks
     if (action === 'approve' && transaction.status === 'success') {
