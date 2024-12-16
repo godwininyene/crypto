@@ -93,7 +93,7 @@ app.use('/api/v1/transactions', transactionRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/plans',  upload.none(), planRouter);
 app.use('/api/v1/investments', upload.none(), investmentRouter);
-app.use('/api/v1/paymentOptions', upload.none(), paymentOptionRouter);
+app.use('/api/v1/paymentOptions', paymentOptionRouter);
 app.use('/api/v1/faqs', upload.none(), faqRouter);
 app.use('/api/v1/stats', statsRouter)
 app.use('/api/v1/countries', async(req, res, next)=>{
