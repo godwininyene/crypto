@@ -3,6 +3,7 @@ const Investment = require('./../models/investment')
 const Plan = require('../models/plan');
 const Wallet = require('../models/wallet');
 const AppError = require("../utils/apError");
+const User = require('./../models/user')
 const Email = require("../utils/email");
 
 
@@ -42,6 +43,23 @@ exports.makeInvestment = catchAsync(async(req, res, next)=>{
     //Create investment
     req.body.expiryDate = expiryDate;
     const investment = await Investment.create(req.body);
+
+    //Substract invested amount from wallet
+    wallet.balance -= req.body.amount;
+    await wallet.save();
+
+    //Manage referral wallet
+    if(req.user.referralId){
+        const referral= await User.findOne({accountId: req.user.referralId});
+       if(referral){
+            const referral_bonus = (plan.percentage / 100) * req.body.amount;
+            const referral_wallet = await Wallet.findOne({user: referral._id});
+            referral_wallet.referralBalance+=referral_bonus
+            await  referral_wallet.save();
+       }
+
+    }
+   
 
     // Send email
      try {
